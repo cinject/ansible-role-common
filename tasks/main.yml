@@ -1,0 +1,72 @@
+- name: Add deploy user
+  user: name={{ deploy_user_name }} password="{{ deploy_user_pass }}" shell=/bin/bash groups=wheel generate_ssh_key=yes
+  when: deploy_user_name is defined and deploy_user_pass is defined
+  register: res_deploy_create
+  
+- name: Downloading pub key
+  fetch: src=/home/{{ deploy_user_name }}/.ssh/id_rsa.pub dest={{ fetch_private_dir }}/id_rsa.pub flat=yes
+  when: not res_deploy_create.skipped | default(False) and fetch_private_dir is defined
+  
+- name: Add authorized keys for deploy user
+  authorized_key:
+    user: "{{ deploy_user_name }}"
+    key: "{{ lookup('file', item) }}"
+  with_items: "{{ deploy_user_public_keys }}"
+  when: not res_deploy_create.skipped | default(False) and deploy_user_public_keys is defined
+  
+- name: Disallow root SSH access
+  lineinfile: 
+    dest: /etc/ssh/sshd_config
+    regexp: "^PermitRootLogin"
+    line: "PermitRootLogin {{ 'yes' if ssh_permit_root_login else 'no' }}"
+    state: present
+  notify: Restart ssh
+  
+- name: Set locale / LANG
+  lineinfile:
+    path: /etc/environment
+    regexp: '^LANG='
+    line: 'LANG=en_US.UTF-8'
+    
+- name: Set locale / LC_ALL
+  lineinfile:
+    path: /etc/environment
+    regexp: '^LC_ALL='
+    line: 'LC_ALL=en_US.UTF-8'
+    
+- name: Set Hostname | {{ server_name }}
+  hostname: name={{ server_name }}
+  when: server_name is defined
+  
+- name: State SElinux | {{ selinux_state }}
+  selinux: state={{ selinux_state }} policy={{ selinux_policy }}
+  when: selinux_state is defined
+  
+- name: Install repositories
+  include_tasks: repo.yml
+  vars:
+    obj: "{{ item }}"
+  with_items: "{{ repo_install }}"
+  tags: repo
+
+- name: Install gen packages
+  yum: name={{ install_gen_packages }} state=present
+  
+- name: Install ext packages
+  yum: name={{ install_ext_packages }} state=present
+  when: install_ext_packages is defined
+
+- name: Ensure groups created
+  group: name={{ item }} state=present
+  with_items: "{{ groups_add }}"
+
+- name: Set users settings
+  user:
+    name: "{{ item.name }}"
+    groups: "{{ item.groups }}"
+    password: "{{ item.password }}"
+    append: "{{ item.append | default('no') }}"
+    create_home: "{{ item.create_home | default('no') }}"
+  with_items: "{{ users_add }}"
+  
+

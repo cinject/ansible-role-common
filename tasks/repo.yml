@@ -1,0 +1,11 @@
+- name: Install repo | {{ obj.url }}
+  yum:
+    name: "{{ obj.url }}"
+    state: present
+  tags: repo
+    
+- name: Import GPG key | {{ obj.gpg_key }}
+  rpm_key:
+    key: "{{ obj.gpg_key }}"
+    state: present
+  tags: repo
