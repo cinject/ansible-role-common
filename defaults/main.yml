@@ -6,11 +6,4 @@ groups_add: []
 users_add: []
 repo_install: []
 
-install_gen_packages:
-  - git
-  - vim
-  - curl
-  - wget
-  - zip
-  - unzip
-  - tmux
+install_gen_packages: []
