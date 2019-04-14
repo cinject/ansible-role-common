@@ -50,10 +50,10 @@
   tags: repo
 
 - name: Install gen packages
-  yum: name={{ install_gen_packages }} state=present
+  package: name={{ install_gen_packages }} state=present
   
 - name: Install ext packages
-  yum: name={{ install_ext_packages }} state=present
+  package: name={{ install_ext_packages }} state=present
   when: install_ext_packages is defined
 
 - name: Ensure groups created
@@ -63,6 +63,7 @@
 - name: Set users settings
   user:
     name: "{{ item.name }}"
+    shell: "{{ item.shell | default('/bin/bash') }}"
     groups: "{{ item.groups }}"
     password: "{{ item.password }}"
     append: "{{ item.append | default('no') }}"
